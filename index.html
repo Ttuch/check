@@ -83,14 +83,25 @@
       margin-top: 20px;
       text-align: center;
     }
+
+    .help-list {
+      color: #00ff99;
+      margin-left: 15px;
+    }
+
+    .system {
+      color: #00ffaa;
+    }
   </style>
 </head>
 <body>
 
   <h1>MiniVerse</h1>
   <div class="desc">
-    Project นี้ทำมาเพื่อแก้ไขปัญหาสำหรับคนที่อยากเรียนรู้ตัวของ sensor ต่าง ๆ<br>
-    และตัวของ arduino ได้เข้าถึงง่ายยิ่งขึ้น โดยมีระบบแก้ไขปัญหาโดยไม่ต้อง Upload โค้ดทุกครั้ง
+    โครงงานนี้จัดทำขึ้นเพื่อแก้ปัญหาของผู้ที่ต้องการเรียนรู้การใช้งาน Sensor และ Arduino แต่พบอุปสรรคในการทดลอง<br>
+     และอัปโหลดโค้ดบ่อยครั้ง ระบบที่พัฒนาขึ้นช่วยให้ผู้ใช้สามารถทดลองและควบคุม การทำงานของบอร์ดได้แบบเรียลไทม์<br>
+     โดยไม่จำเป็นต้องอัปโหลดโปรแกรมใหม่ทุกครั้ง อีกทั้งยังออกแบบให้ใช้งานง่าย เหมาะสำหรับผู้เริ่มต้น<br>
+     และผู้ที่ต้องการทำความเข้าใจการทำงานของไมโครคอนโทรลเลอร์อย่างเป็นระบบมากขึ้น
   </div>
 
   <div class="console" id="console">
@@ -99,7 +110,7 @@
 
   <div class="input-box">
     <span class="prompt">>></span>
-    <input type="text" id="message" placeholder="พิมพ์คำสั่งที่นี่แล้วกด Enter...">
+    <input type="text" id="message" placeholder="Enter Command ...">
   </div>
 
   <div class="footer">
@@ -116,19 +127,25 @@
     const consoleEl = document.getElementById('console');
     const inputEl = document.getElementById('message');
 
-    function logToConsole(msg) {
+    function logToConsole(msg, isHelp = false, isSystem = false) {
       const newLine = document.createElement('div');
-      newLine.textContent = '>> ' + msg;
+      if (isHelp || isSystem) {
+        newLine.className = isHelp ? 'help-list' : 'system';
+        newLine.innerHTML = msg;
+      } else {
+        newLine.textContent = '>> ' + msg;
+      }
       consoleEl.appendChild(newLine);
-      consoleEl.scrollTop = consoleEl.scrollHeight; // auto scroll down
+      consoleEl.scrollTop = consoleEl.scrollHeight;
     }
 
     client.on('connect', () => {
-      logToConsole('เชื่อมต่อกับ MQTT สำเร็จ ✓');
+      logToConsole('connect MQTT success ✓', false, true);
+      logToConsole('/help for show all command', false, true);
     });
 
     client.on('error', (err) => {
-      logToConsole('เกิดข้อผิดพลาดในการเชื่อมต่อ MQTT');
+      logToConsole('error connect MQTT', false, true);
       console.error(err);
     });
 
@@ -136,7 +153,7 @@
 
     client.on('message', (t, message) => {
       if (t === topic) {
-        logToConsole('ข้อความจากระบบ: ' + message.toString());
+        logToConsole('system - ' + message.toString());
       }
     });
 
@@ -144,8 +161,34 @@
       if (e.key === 'Enter') {
         const msg = inputEl.value.trim();
         if (!msg) return;
-        client.publish(topic, msg);
-        logToConsole(msg);
+
+        if (msg === '/help') {
+            logToConsole('command list:', true);
+            logToConsole('/info — show info', true);
+            logToConsole('/help — show all command', true);
+            logToConsole('/version — show version', true);
+            logToConsole('/about — show about Project', true);
+            logToConsole('/clear — clear Console', true);
+            logToConsole('temp — temperature measurement', true);
+            logToConsole('set unit temp <C/K/F> — set unti temperature', true);
+            logToConsole('light <on/off> — LED On/Off', true);
+            logToConsole('set light <int> — LED brightness', true);
+            logToConsole('distance — measure the distance', true);
+            logToConsole('lcd show line "message", "message" — show text LCD', true);
+            logToConsole('lcd clear — clear LCD', true);
+            logToConsole('date — show date', true);
+            logToConsole('time — show time', true);
+            logToConsole('season — show season', true);
+            
+          logToConsole('Text — sent to MQTT Broker', true);
+        } 
+        else if (msg === '/clear') {
+          consoleEl.innerHTML = '>> clear success<br>';
+        }
+        else {
+          client.publish(topic, msg);
+          logToConsole(msg);
+        }
         inputEl.value = '';
       }
     });
